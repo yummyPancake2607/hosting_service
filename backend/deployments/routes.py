@@ -11,8 +11,12 @@ import threading
 import time
 import zipfile
 from pathlib import Path
+from urllib.parse import urlparse
+
+import httpx
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
@@ -32,6 +36,17 @@ router = APIRouter(tags=["Deployments"])
 _RUNTIME_ROOT = Path(__file__).resolve().parents[1] / ".runtime"
 _RUNTIME_LOCK = threading.Lock()
 _RUNTIME_REGISTRY: dict[int, dict[str, object]] = {}
+_RUNTIME_PROXY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
+_HOP_BY_HOP_HEADERS = {
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailers",
+    "transfer-encoding",
+    "upgrade",
+}
 
 
 def _slugify(value: str) -> str:
@@ -39,17 +54,75 @@ def _slugify(value: str) -> str:
     return cleaned or "project"
 
 
+def _is_loopback_host(hostname: str | None) -> bool:
+    host = (hostname or "").strip().lower()
+    return host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+
+def _validated_base_url(candidate: str | None) -> str | None:
+    if not candidate:
+        return None
+
+    value = candidate.strip().rstrip("/")
+    if not value:
+        return None
+
+    try:
+        parsed = urlparse(value)
+    except Exception:
+        return None
+
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+
+    return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+
+def _request_base_url(request: Request) -> str | None:
+    origin = _validated_base_url(request.headers.get("origin"))
+    if origin:
+        return origin
+
+    forwarded_host = (request.headers.get("x-forwarded-host") or "").split(",", 1)[0].strip()
+    host = forwarded_host or (request.headers.get("host") or "").strip()
+    if host:
+        forwarded_proto = (request.headers.get("x-forwarded-proto") or "").split(",", 1)[0].strip()
+        scheme = (forwarded_proto or request.url.scheme or "http").strip() or "http"
+        return _validated_base_url(f"{scheme}://{host}")
+
+    return _validated_base_url(str(request.base_url))
+
+
 def _public_url_from_slug(slug: str, base_url: str | None = None) -> str:
-    base = (base_url or os.getenv("PUBLIC_DEPLOYMENT_BASE_URL", "http://localhost:5173")).rstrip("/")
+    base = (base_url or os.getenv("PUBLIC_DEPLOYMENT_BASE_URL", "http://127.0.0.1:8000")).rstrip("/")
     return f"{base}/{slug}"
 
 
 def _public_base_from_request(request: Request) -> str:
-    origin = (request.headers.get("origin") or "").strip()
-    if origin.startswith("http://localhost:") or origin.startswith("http://127.0.0.1:"):
-        return origin
+    configured = _validated_base_url(os.getenv("PUBLIC_DEPLOYMENT_BASE_URL", ""))
+    request_base = _request_base_url(request)
 
-    return os.getenv("PUBLIC_DEPLOYMENT_BASE_URL", "http://localhost:5173")
+    if configured:
+        configured_host = urlparse(configured).hostname
+        if not _is_loopback_host(configured_host):
+            return configured
+
+    if request_base:
+        request_host = urlparse(request_base).hostname
+        if not _is_loopback_host(request_host):
+            return request_base
+
+    if configured:
+        return configured
+
+    if request_base:
+        return request_base
+
+    return "http://127.0.0.1:8000"
+
+
+def _runtime_proxy_url_from_slug(slug: str, base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/_runtime/{slug}"
 
 
 def _extract_slug(public_url: str | None, project_name: str) -> str:
@@ -58,6 +131,33 @@ def _extract_slug(public_url: str | None, project_name: str) -> str:
         if "/" in sanitized:
             return sanitized.rsplit("/", 1)[-1]
     return _slugify(project_name)
+
+
+def _public_url_for_deployment(item: Deployment, public_base: str | None = None) -> str | None:
+    slug = _extract_slug(item.public_url, item.project_name)
+    if not slug:
+        return item.public_url
+
+    if public_base:
+        return _public_url_from_slug(slug, public_base)
+
+    return item.public_url or _public_url_from_slug(slug)
+
+
+def _public_runtime_url_for_deployment(item: Deployment, public_base: str | None = None) -> str | None:
+    runtime_url = _runtime_url_for_deployment(item.id)
+    if not runtime_url:
+        return None
+
+    slug = _extract_slug(item.public_url, item.project_name)
+    if not slug:
+        return runtime_url
+
+    resolved_base = public_base or _validated_base_url(os.getenv("PUBLIC_DEPLOYMENT_BASE_URL", ""))
+    if not resolved_base:
+        return runtime_url
+
+    return _runtime_proxy_url_from_slug(slug, resolved_base)
 
 
 def _append_log(db: Session, deployment_id: int, message: str) -> None:
@@ -160,19 +260,19 @@ def _unique_slug(db: Session, project_name: str, exclude_id: int | None = None) 
     return candidate
 
 
-def _to_summary(item: Deployment) -> DeploymentSummaryResponse:
+def _to_summary(item: Deployment, public_base: str | None = None) -> DeploymentSummaryResponse:
     return DeploymentSummaryResponse(
         id=item.id,
         project_name=item.project_name,
         project_type=item.project_type,
         status=item.status,
-        public_url=item.public_url,
-        runtime_url=_runtime_url_for_deployment(item.id),
+        public_url=_public_url_for_deployment(item, public_base=public_base),
+        runtime_url=_public_runtime_url_for_deployment(item, public_base=public_base),
         created_at=item.created_at,
     )
 
 
-def _to_detail(item: Deployment) -> DeploymentDetailResponse:
+def _to_detail(item: Deployment, public_base: str | None = None) -> DeploymentDetailResponse:
     env_rows = [
         EnvVarResponse.model_validate(env)
         for env in sorted(item.env_vars, key=lambda row: row.id)
@@ -187,8 +287,8 @@ def _to_detail(item: Deployment) -> DeploymentDetailResponse:
         project_name=item.project_name,
         project_type=item.project_type,
         status=item.status,
-        public_url=item.public_url,
-        runtime_url=_runtime_url_for_deployment(item.id),
+        public_url=_public_url_for_deployment(item, public_base=public_base),
+        runtime_url=_public_runtime_url_for_deployment(item, public_base=public_base),
         created_at=item.created_at,
         build_command=item.build_command,
         run_command=item.run_command,
@@ -795,12 +895,43 @@ def _load_deployment_or_500(db: Session, deployment_id: int) -> Deployment:
     return created
 
 
+def _find_deployment_by_slug(
+    db: Session,
+    deployment_slug: str,
+    include_relations: bool = False,
+) -> Deployment | None:
+    target_slug = _slugify(deployment_slug)
+    query = db.query(Deployment)
+    if include_relations:
+        query = query.options(selectinload(Deployment.env_vars), selectinload(Deployment.logs))
+
+    deployments = query.order_by(Deployment.created_at.desc(), Deployment.id.desc()).all()
+    for deployment in deployments:
+        if _extract_slug(deployment.public_url, deployment.project_name) == target_slug:
+            return deployment
+
+    return None
+
+
+def _build_runtime_target_url(runtime_base: str, resource_path: str, query: str) -> str:
+    target = runtime_base.rstrip("/")
+    trimmed_resource = resource_path.strip("/")
+    if trimmed_resource:
+        target = f"{target}/{trimmed_resource}"
+
+    if query:
+        return f"{target}?{query}"
+
+    return target
+
+
 @router.get("/deployments", response_model=list[DeploymentSummaryResponse])
-def list_deployments(db: Session = Depends(get_db)):
+def list_deployments(request: Request, db: Session = Depends(get_db)):
+    public_base = _public_base_from_request(request)
     deployments = (
         db.query(Deployment).order_by(Deployment.created_at.desc(), Deployment.id.desc()).all()
     )
-    return [_to_summary(item) for item in deployments]
+    return [_to_summary(item, public_base=public_base) for item in deployments]
 
 
 @router.post("/deploy/detect")
@@ -861,7 +992,7 @@ def create_deployment(
     _append_log(db, deployment.id, f"[ready] Deployment available at {deployment.public_url}")
     db.commit()
 
-    return _to_detail(_load_deployment_or_500(db, deployment.id))
+    return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base)
 
 
 @router.post("/deploy/upload", response_model=DeploymentDetailResponse)
@@ -1039,7 +1170,7 @@ async def create_deployment_from_upload(
         deployment.status = "Failed"
         _append_log(db, deployment.id, f"[ingest] ERROR archive extraction failed: {exc}")
         db.commit()
-        return _to_detail(_load_deployment_or_500(db, deployment.id))
+        return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base)
 
     _append_log(db, deployment.id, f"[ingest] Source extracted to {source_root}")
     db.commit()
@@ -1173,8 +1304,10 @@ async def create_deployment_from_upload(
 
     if runtime_url:
         deployment.status = "Running"
+        public_runtime_url = _runtime_proxy_url_from_slug(slug, public_base)
         _append_log(db, deployment.id, f"[ready] Deployment available at {deployment.public_url}")
-        _append_log(db, deployment.id, f"[ready] Runtime endpoint {runtime_url}")
+        _append_log(db, deployment.id, f"[ready] Runtime endpoint {public_runtime_url}")
+        _append_log(db, deployment.id, f"[runtime] Internal runtime {runtime_url}")
     else:
         deployment.status = "Failed"
         _append_log(
@@ -1184,28 +1317,22 @@ async def create_deployment_from_upload(
         )
 
     db.commit()
-    return _to_detail(_load_deployment_or_500(db, deployment.id))
+    return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base)
 
 
 @router.get("/deployment/slug/{deployment_slug}", response_model=DeploymentDetailResponse)
-def get_deployment_by_slug(deployment_slug: str, db: Session = Depends(get_db)):
-    target_slug = _slugify(deployment_slug)
-    deployments = (
-        db.query(Deployment)
-        .options(selectinload(Deployment.env_vars), selectinload(Deployment.logs))
-        .order_by(Deployment.created_at.desc(), Deployment.id.desc())
-        .all()
-    )
-
-    for deployment in deployments:
-        if _extract_slug(deployment.public_url, deployment.project_name) == target_slug:
-            return _to_detail(deployment)
+def get_deployment_by_slug(deployment_slug: str, request: Request, db: Session = Depends(get_db)):
+    public_base = _public_base_from_request(request)
+    deployment = _find_deployment_by_slug(db, deployment_slug, include_relations=True)
+    if deployment:
+        return _to_detail(deployment, public_base=public_base)
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
 
 @router.get("/deployment/{deployment_id}", response_model=DeploymentDetailResponse)
-def get_deployment(deployment_id: int, db: Session = Depends(get_db)):
+def get_deployment(deployment_id: int, request: Request, db: Session = Depends(get_db)):
+    public_base = _public_base_from_request(request)
     deployment = (
         db.query(Deployment)
         .options(selectinload(Deployment.env_vars), selectinload(Deployment.logs))
@@ -1215,7 +1342,68 @@ def get_deployment(deployment_id: int, db: Session = Depends(get_db)):
     if not deployment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
-    return _to_detail(deployment)
+    return _to_detail(deployment, public_base=public_base)
+
+
+@router.api_route(
+    "/_runtime/{deployment_slug}",
+    methods=_RUNTIME_PROXY_METHODS,
+    include_in_schema=False,
+)
+@router.api_route(
+    "/_runtime/{deployment_slug}/{resource_path:path}",
+    methods=_RUNTIME_PROXY_METHODS,
+    include_in_schema=False,
+)
+async def proxy_runtime_request(
+    deployment_slug: str,
+    request: Request,
+    resource_path: str = "",
+    db: Session = Depends(get_db),
+):
+    deployment = _find_deployment_by_slug(db, deployment_slug)
+    if not deployment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    runtime_base = _runtime_url_for_deployment(deployment.id)
+    if not runtime_base:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deployment runtime is not ready",
+        )
+
+    target_url = _build_runtime_target_url(runtime_base, resource_path, request.url.query)
+    request_headers = {
+        key: value
+        for key, value in request.headers.items()
+        if key.lower() not in _HOP_BY_HOP_HEADERS and key.lower() != "host"
+    }
+    request_body = await request.body()
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=False) as client:
+            upstream = await client.request(
+                request.method,
+                target_url,
+                headers=request_headers,
+                content=request_body,
+            )
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Runtime upstream unreachable: {exc}",
+        ) from exc
+
+    response_headers = {
+        key: value
+        for key, value in upstream.headers.items()
+        if key.lower() not in _HOP_BY_HOP_HEADERS and key.lower() != "content-length"
+    }
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        headers=response_headers,
+    )
 
 
 @router.get("/logs/{deployment_id}", response_model=list[BuildLogResponse])

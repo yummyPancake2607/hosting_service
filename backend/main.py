@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from auth.routes import router as auth_router
 from database import Base, SessionLocal, engine
@@ -13,8 +14,24 @@ from deployments.routes import router as deployments_router
 from utils.bootstrap import seed_default_user
 from fastapi.staticfiles import StaticFiles
 _BACKEND_DIR = Path(__file__).resolve().parent
+_FRONTEND_DIST_DIR = _BACKEND_DIR.parent / "frontend" / "dist"
 load_dotenv(dotenv_path=_BACKEND_DIR / ".env", override=True)
 load_dotenv(override=False)
+
+
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        try:
+            response = await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code == 404 and not Path(path).suffix:
+                return await super().get_response("index.html", scope)
+            raise
+
+        if response.status_code == 404 and not Path(path).suffix:
+            return await super().get_response("index.html", scope)
+
+        return response
 
 
 @asynccontextmanager
@@ -63,8 +80,10 @@ def health_check():
 
     return {"status": "ok", "database": database}
 
-app.mount(
-    "/",
-    StaticFiles(directory="../frontend/dist", html=True),
-    name="frontend"
-)
+
+if _FRONTEND_DIST_DIR.exists():
+    app.mount(
+        "/",
+        SPAStaticFiles(directory=str(_FRONTEND_DIST_DIR), html=True),
+        name="frontend",
+    )

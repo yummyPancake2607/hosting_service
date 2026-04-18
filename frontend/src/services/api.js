@@ -1,14 +1,74 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+function isLocalHostName(hostname) {
+  const normalized = String(hostname || "").toLowerCase();
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "0.0.0.0";
+}
+
+function getBrowserLocation() {
+  const root = typeof globalThis === "object" && globalThis !== null ? globalThis : null;
+  const location = root && "location" in root ? root.location : null;
+
+  if (!location || typeof location.origin !== "string" || typeof location.host !== "string") {
+    return null;
+  }
+
+  return location;
+}
+
+const browserLocation = getBrowserLocation();
+const isViteDevServer = Boolean(browserLocation && /:(5173|4173)$/.test(browserLocation.host));
+const DEFAULT_API_BASE_URL =
+  isViteDevServer || !browserLocation ? "http://127.0.0.1:8000" : browserLocation.origin;
+
+function resolveApiBaseUrl(rawValue) {
+  const candidate = String(rawValue ?? "").trim();
+  if (!candidate) {
+    return DEFAULT_API_BASE_URL;
+  }
+
+  if (!browserLocation || isViteDevServer) {
+    return candidate;
+  }
+
+  try {
+    const parsed = new URL(candidate, browserLocation.origin);
+    if (isLocalHostName(parsed.hostname)) {
+      return browserLocation.origin;
+    }
+  } catch {
+    return candidate;
+  }
+
+  return candidate;
+}
+
+const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 const USE_MOCK_API = (import.meta.env.VITE_USE_MOCK_API ?? "false").toLowerCase() === "true";
-const DEFAULT_PUBLIC_BASE_URL =
-  typeof window !== "undefined" && window.location?.origin
-    ? window.location.origin
-    : "http://localhost:5173";
-const PUBLIC_DEPLOYMENT_BASE_URL = (
-  import.meta.env.VITE_PUBLIC_DEPLOYMENT_BASE_URL || DEFAULT_PUBLIC_BASE_URL
-).replace(/\/+$/, "");
+const DEFAULT_PUBLIC_BASE_URL = browserLocation?.origin || "http://localhost:5173";
+
+function resolvePublicBaseUrl(rawValue) {
+  const candidate = String(rawValue ?? "").trim();
+  if (!candidate) {
+    return DEFAULT_PUBLIC_BASE_URL.replace(/\/+$/, "");
+  }
+
+  if (!browserLocation || isViteDevServer) {
+    return candidate.replace(/\/+$/, "");
+  }
+
+  try {
+    const parsed = new URL(candidate, browserLocation.origin);
+    if (isLocalHostName(parsed.hostname)) {
+      return browserLocation.origin.replace(/\/+$/, "");
+    }
+    return parsed.toString().replace(/\/+$/, "");
+  } catch {
+    return candidate.replace(/\/+$/, "");
+  }
+}
+
+const PUBLIC_DEPLOYMENT_BASE_URL = resolvePublicBaseUrl(import.meta.env.VITE_PUBLIC_DEPLOYMENT_BASE_URL);
 const MOCK_STORAGE_KEY = "crisperhost_mock_deployments";
 
 const http = axios.create({
