@@ -47,6 +47,24 @@ const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 const USE_MOCK_API = (import.meta.env.VITE_USE_MOCK_API ?? "false").toLowerCase() === "true";
 const DEFAULT_PUBLIC_BASE_URL = browserLocation?.origin || "http://localhost:5173";
 
+function resolveTimeoutMs(rawValue, fallbackMs) {
+  const normalized = String(rawValue ?? "").trim();
+  if (!normalized) {
+    return fallbackMs;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return fallbackMs;
+  }
+
+  return parsed;
+}
+
+const DEFAULT_API_TIMEOUT_MS = resolveTimeoutMs(import.meta.env.VITE_API_TIMEOUT_MS, 10000);
+const ARCHIVE_DETECT_TIMEOUT_MS = resolveTimeoutMs(import.meta.env.VITE_ARCHIVE_DETECT_TIMEOUT_MS, 120000);
+const DEPLOY_UPLOAD_TIMEOUT_MS = resolveTimeoutMs(import.meta.env.VITE_DEPLOY_UPLOAD_TIMEOUT_MS, 0);
+
 function resolvePublicBaseUrl(rawValue) {
   const candidate = String(rawValue ?? "").trim();
   if (!candidate) {
@@ -73,7 +91,7 @@ const MOCK_STORAGE_KEY = "crisperhost_mock_deployments";
 
 const http = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: DEFAULT_API_TIMEOUT_MS,
 });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -484,7 +502,9 @@ const api = {
     const formData = new FormData();
     formData.append("source_archive", sourceArchive);
 
-    const { data } = await http.post("/deploy/detect", formData);
+    const { data } = await http.post("/deploy/detect", formData, {
+      timeout: ARCHIVE_DETECT_TIMEOUT_MS,
+    });
     return data;
   },
 
@@ -502,7 +522,9 @@ const api = {
       formData.append("env_vars_json", JSON.stringify(payload.env_vars || []));
       formData.append("source_archive", payload.source_archive);
 
-      const { data } = await http.post("/deploy/upload", formData);
+      const { data } = await http.post("/deploy/upload", formData, {
+        timeout: DEPLOY_UPLOAD_TIMEOUT_MS,
+      });
       return data;
     }
 
