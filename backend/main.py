@@ -62,3 +62,9 @@ def health_check():
         db.close()
 
     return {"status": "ok", "database": database}
+
+app.mount(
+    "/app",
+    StaticFiles(directory="../frontend/dist", html=True),
+    name="frontend"
+)
