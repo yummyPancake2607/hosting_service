@@ -1,0 +1,349 @@
+/* ========== TOP GAMES REVIEWS SECTION ========== */
+.reviews-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 20px 0;
+}
+
+.reviews-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.reviews-title-section h2 {
+  margin: 0 0 12px 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--cp-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.reviews-title-section p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--cp-text-secondary);
+}
+
+.reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.review-card {
+  background: #ffffff;
+  border: 1px solid var(--cp-border);
+  border-radius: 0px;
+  padding: 24px;
+  box-shadow: none;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.review-card:hover {
+  border-color: var(--cp-text-primary);
+  box-shadow: none;
+  transform: none;
+}
+
+.review-top {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.reviewer-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.reviewer-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cp-primary), var(--cp-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(168, 201, 160, 0.15);
+}
+
+.reviewer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reviewer-name {
+  font-weight: 700;
+  color: var(--cp-text-primary);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--cp-accent-alt);
+  border: none;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  color: white;
+  font-weight: 700;
+}
+
+.review-source {
+  font-size: 0.8rem;
+  color: var(--cp-text-muted);
+  text-transform: capitalize;
+  letter-spacing: 0px;
+  font-weight: 600;
+}
+
+.review-rating-large {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--cp-accent);
+}
+
+.rating-number {
+  font-size: 2rem;
+}
+
+.rating-max {
+  font-size: 0.9rem;
+  color: var(--cp-text-muted);
+}
+
+.review-game-title {
+  font-size: 0.9rem;
+  color: var(--cp-text-secondary);
+  padding: 10px;
+  background: rgba(0, 217, 255, 0.08);
+  border: 1px solid var(--cp-border-subtle);
+  border-radius: 4px;
+}
+
+.review-game-title strong {
+  color: var(--cp-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.review-text {
+  color: var(--cp-text-secondary);
+  line-height: 1.7;
+  font-size: 0.95rem;
+  flex-grow: 1;
+}
+
+.review-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--cp-border-subtle);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.helpful-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.helpful-count {
+  font-size: 0.85rem;
+  color: var(--cp-text-muted);
+  font-weight: 600;
+}
+
+.review-action-btn {
+  padding: 6px 14px;
+  background: rgba(0, 217, 255, 0.1);
+  border: 1px solid var(--cp-primary);
+  color: var(--cp-primary);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.review-action-btn:hover {
+  background: rgba(0, 217, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+}
+
+.reviews-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.view-all-reviews-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.3), rgba(181, 55, 242, 0.3));
+  border: 1px solid var(--cp-primary);
+  color: var(--cp-primary);
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: inset 0 0 20px rgba(0, 217, 255, 0.1);
+}
+
+.view-all-reviews-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.5), rgba(181, 55, 242, 0.5));
+  box-shadow: 
+    0 0 20px rgba(0, 217, 255, 0.4),
+    inset 0 0 20px rgba(0, 217, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .reviews-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+  }
+
+  .reviews-title-section h2 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .reviews-container {
+    gap: 20px;
+  }
+
+  .reviews-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .review-card {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .reviews-title-section h2 {
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+  }
+
+  .reviewer-name {
+    font-size: 0.9rem;
+  }
+
+  .review-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .review-rating-large {
+    font-size: 1.5rem;
+  }
+
+  .rating-number {
+    font-size: 1.7rem;
+  }
+
+  .view-all-reviews-btn {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .reviews-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .review-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .reviews-title-section h2 {
+    font-size: 1.2rem;
+  }
+
+  .review-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reviewer-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .review-rating-large {
+    font-size: 1.2rem;
+  }
+
+  .rating-number {
+    font-size: 1.4rem;
+  }
+
+  .review-text {
+    font-size: 0.85rem;
+  }
+
+  .review-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .view-all-reviews-btn {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 0.85rem;
+  }
+}

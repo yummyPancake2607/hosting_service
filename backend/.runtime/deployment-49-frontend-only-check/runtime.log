@@ -1,0 +1,5 @@
+127.0.0.1 - - [18/Apr/2026 09:23:59] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 09:23:59] "GET /assets/index-DhH1XJAz.css HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 09:23:59] "GET /assets/index-Bw09lQg5.js HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 09:23:59] code 404, message File not found
+127.0.0.1 - - [18/Apr/2026 09:23:59] "GET /games/search?q=&limit=40&offset=0 HTTP/1.1" 404 -

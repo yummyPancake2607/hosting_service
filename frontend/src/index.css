@@ -1,0 +1,118 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg-primary: #000000;
+  --bg-secondary: #06110b;
+  --line: rgba(0, 255, 136, 0.2);
+  --line-strong: rgba(0, 255, 136, 0.4);
+  --text-main: #b9ffdc;
+  --text-dim: #7bcfa4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at 12% 15%, rgba(0, 255, 136, 0.12), transparent 30%),
+    radial-gradient(circle at 82% 3%, rgba(18, 183, 106, 0.1), transparent 34%),
+    linear-gradient(135deg, #000 0%, #031007 40%, #010302 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 3px;
+  opacity: 0.08;
+  z-index: 1;
+}
+
+#root {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(0, 255, 136, 0.35);
+  color: #001f11;
+}
+
+.neon-panel {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(8, 16, 10, 0.78), rgba(2, 8, 5, 0.92));
+  box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.08), 0 0 35px rgba(0, 255, 136, 0.08);
+}
+
+.neon-input {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 255, 136, 0.22);
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.neon-input:focus {
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.18);
+}
+
+.terminal-window {
+  border: 1px solid rgba(0, 255, 136, 0.35);
+  background: rgba(0, 7, 2, 0.88);
+  box-shadow: inset 0 0 60px rgba(0, 255, 136, 0.06);
+}
+
+.boot-line {
+  opacity: 0;
+  animation: bootReveal 0.3s forwards;
+}
+
+@keyframes bootReveal {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.cursor-blink {
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    opacity: 0;
+  }
+}
+
+.card-enter {
+  animation: cardEnter 350ms ease;
+}
+
+@keyframes cardEnter {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

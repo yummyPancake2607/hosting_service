@@ -1,0 +1,13 @@
+npm error code ENOENT
+npm error syscall open
+npm error path /home/snowowl/hosting/backend/.runtime/deployment-20-index/src/package.json
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/home/snowowl/hosting/backend/.runtime/deployment-20-index/src/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /home/snowowl/.npm/_logs/2026-04-17T22_17_03_526Z-debug-0.log
+127.0.0.1 - - [18/Apr/2026 03:47:15] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 03:47:32] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [18/Apr/2026 03:49:24] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [18/Apr/2026 03:52:41] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [18/Apr/2026 03:53:34] "GET / HTTP/1.1" 200 -

@@ -1,0 +1,18 @@
+npm error Missing script: "start"
+npm error
+npm error Did you mean one of these?
+npm error   npm star # Mark your favorite packages
+npm error   npm stars # View packages marked as favorites
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/snowowl/.npm/_logs/2026-04-17T23_18_02_695Z-debug-0.log
+127.0.0.1 - - [18/Apr/2026 04:48:36] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 04:48:36] "GET /assets/index-DhH1XJAz.css HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 04:48:36] "GET /assets/index-BoSt5e7b.js HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 04:48:51] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [18/Apr/2026 04:48:51] "GET /assets/index-BoSt5e7b.js HTTP/1.1" 304 -
+127.0.0.1 - - [18/Apr/2026 04:48:51] "GET /assets/index-DhH1XJAz.css HTTP/1.1" 304 -
+Serving HTTP on 127.0.0.1 port 33615 (http://127.0.0.1:33615/) ...
+
+Keyboard interrupt received, exiting.

@@ -1,0 +1,64 @@
+:root {
+  /* Minimalist Color Palette */
+  --cp-dark-bg: #ffffff;
+  --cp-darker-bg: #fafafa;
+  --cp-primary: #000000;
+  --cp-primary-glow: #000000;
+  --cp-secondary: #666666;
+  --cp-accent: #333333;
+  --cp-accent-alt: #f5f5f5;
+  --cp-neutral-dark: #f0f0f0;
+  --cp-neutral-medium: #e8e8e8;
+  --cp-neutral-light: #e0e0e0;
+  --cp-border: #d0d0d0;
+  --cp-border-subtle: #e8e8e8;
+  --cp-text-primary: #1a1a1a;
+  --cp-text-secondary: #666666;
+  --cp-text-muted: #999999;
+
+  /* Font Family - Clean Typography */
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+  color: var(--cp-text-primary);
+  background-color: var(--cp-dark-bg);
+  line-height: 1.6;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  min-height: 100vh;
+  height: 100%;
+  width: 100%;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  display: none;
+}
+
+#root {
+  min-height: 100vh;
+}

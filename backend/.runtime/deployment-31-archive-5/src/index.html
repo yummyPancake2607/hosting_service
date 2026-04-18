@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>JavaScript Events Playground</title>
+
+    <script>
+      // onclick
+      function handleClick() {
+        alert("Button clicked!");
+      }
+
+      // onmouseover
+      function handleMouseOver(el) {
+        el.style.background = "lightgreen";
+      }
+
+      // onmouseout
+      function handleMouseOut(el) {
+        el.style.background = "#eee";
+      }
+
+      // onsubmit
+      function handleSubmit() {
+        alert("Form submitted!");
+        return false; // prevent actual submission
+      }
+
+      // onfocus
+      function handleFocus(el) {
+        el.style.background = "lightyellow";
+      }
+
+      // onblur
+      function handleBlur(el) {
+        el.style.background = "white";
+      }
+
+      // onload
+      function handleLoad() {
+        alert("Page loaded successfully!");
+      }
+
+      // onchange
+      function handleChange(el) {
+        alert("You selected: " + el.value);
+      }
+
+      // getElementById
+      function updateElementById() {
+        document.getElementById("myElement").innerHTML = "Element updated via getElementById!";
+      }
+    </script>
+  </head>
+  <body onload="handleLoad()">
+    <!-- onclick -->
+    <section>
+      <div class="guide">Click the button below to trigger <b>onclick</b>.</div>
+      <button onclick="handleClick()">Click Me</button>
+    </section>
+
+    <!-- onmouseover / onmouseout -->
+    <section>
+      <div class="guide">
+        Hover over the box to see <b>onmouseover</b> and move away for
+        <b>onmouseout</b>.
+      </div>
+      <div
+        class="hoverBox"
+        onmouseover="handleMouseOver(this)"
+        onmouseout="handleMouseOut(this)"
+      >
+        Hover Me
+      </div>
+    </section>
+
+    <!-- onsubmit -->
+    <section>
+      <div class="guide">Submit the form to trigger <b>onsubmit</b>.</div>
+      <form onsubmit="return handleSubmit();">
+        <input type="text" placeholder="Type something" />
+        <button type="submit">Submit</button>
+      </form>
+    </section>
+
+    <!-- onfocus / onblur -->
+    <section>
+      <div class="guide">
+        Click inside the input to trigger <b>onfocus</b>, then click outside for
+        <b>onblur</b>.
+      </div>
+      <input
+        type="text"
+        onfocus="handleFocus(this)"
+        onblur="handleBlur(this)"
+        placeholder="Focus me"
+      />
+    </section>
+
+    <!-- onchange -->
+    <section>
+      <div class="guide">
+        Change the dropdown selection to trigger <b>onchange</b>.
+      </div>
+      <select onchange="handleChange(this)">
+        <option value="">--Choose--</option>
+        <option value="Option 1">Option 1</option>
+        <option value="Option 2">Option 2</option>
+        <option value="Option 3">Option 3</option>
+      </select>
+    </section>
+
+    <!-- getElementById -->
+    <section>
+      <div class="guide">Click the button to update the element using <b>getElementById</b>.</div>
+      <div id="myElement">I can be updated with getElementById</div>
+      <button onclick="updateElementById()">Update Element by ID</button>
+    </section>
+  </body>
+</html>
