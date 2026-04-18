@@ -79,8 +79,17 @@ export default function DeploymentDetailsPage() {
   };
 
   const handleDelete = async () => {
-    await runAction(() => api.deleteDeployment(id), "Deployment deleted");
-    navigate("/deployments", { replace: true });
+    setBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      await api.deleteDeployment(id);
+      navigate("/deployments", { replace: true });
+    } catch (err) {
+      setError(err?.response?.data?.detail || err?.message || "Delete failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (loading) {

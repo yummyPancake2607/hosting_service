@@ -34,6 +34,7 @@ from utils.security import hash_password
 router = APIRouter(tags=["Deployments"])
 
 _RUNTIME_ROOT = Path(__file__).resolve().parents[1] / ".runtime"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 _RUNTIME_LOCK = threading.Lock()
 _RUNTIME_REGISTRY: dict[int, dict[str, object]] = {}
 _RUNTIME_PROXY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
@@ -184,6 +185,32 @@ def _close_log_handle(entry: dict[str, object]) -> None:
             pass
 
 
+def _is_git_tracked(path: Path) -> bool:
+    try:
+        relative_path = str(path.resolve().relative_to(_REPO_ROOT.resolve()))
+    except Exception:
+        return False
+
+    result = subprocess.run(
+        ["git", "-C", str(_REPO_ROOT), "ls-files", "--error-unmatch", relative_path],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def _directory_has_git_tracked_files(path: Path) -> bool:
+    try:
+        for child in path.rglob("*"):
+            if child.is_file() and _is_git_tracked(child):
+                return True
+    except Exception:
+        return True
+
+    return False
+
+
 def _stop_runtime(deployment_id: int) -> None:
     with _RUNTIME_LOCK:
         existing = _RUNTIME_REGISTRY.pop(deployment_id, None)
@@ -199,6 +226,23 @@ def _stop_runtime(deployment_id: int) -> None:
             pass
 
     _close_log_handle(existing)
+
+
+def _cleanup_runtime_workspace(deployment_id: int) -> None:
+    runtime_root = _ensure_runtime_root()
+    for candidate in runtime_root.glob(f"deployment-{deployment_id}-*"):
+        try:
+            if candidate.is_dir():
+                if _directory_has_git_tracked_files(candidate):
+                    continue
+                shutil.rmtree(candidate)
+            elif candidate.exists():
+                if _is_git_tracked(candidate):
+                    continue
+                candidate.unlink()
+        except Exception:
+            # Cleanup failures should not block delete operations.
+            pass
 
 
 def _register_runtime(
@@ -1343,6 +1387,18 @@ def get_deployment(deployment_id: int, request: Request, db: Session = Depends(g
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     return _to_detail(deployment, public_base=public_base)
+
+
+@router.delete("/deployment/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_deployment(deployment_id: int, db: Session = Depends(get_db)):
+    deployment = db.query(Deployment).filter(Deployment.id == deployment_id).first()
+    if not deployment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    _stop_runtime(deployment_id)
+
+    db.delete(deployment)
+    db.commit()
 
 
 @router.api_route(

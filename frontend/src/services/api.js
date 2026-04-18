@@ -558,7 +558,8 @@ const api = {
       return mockDeleteDeployment(id);
     }
 
-    return { ok: true, message: `Delete simulated for deployment ${id}` };
+    await http.delete(`/deployment/${id}`);
+    return { ok: true };
   },
 };
 
