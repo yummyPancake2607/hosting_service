@@ -11,7 +11,7 @@ from auth.routes import router as auth_router
 from database import Base, SessionLocal, engine
 from deployments.routes import router as deployments_router
 from utils.bootstrap import seed_default_user
-
+from fastapi.staticfiles import StaticFiles
 _BACKEND_DIR = Path(__file__).resolve().parent
 load_dotenv(dotenv_path=_BACKEND_DIR / ".env", override=True)
 load_dotenv(override=False)
