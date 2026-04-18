@@ -145,8 +145,50 @@ def _public_url_for_deployment(item: Deployment, public_base: str | None = None)
     return item.public_url or _public_url_from_slug(slug)
 
 
-def _public_runtime_url_for_deployment(item: Deployment, public_base: str | None = None) -> str | None:
+def _recover_static_runtime_if_possible(db: Session, item: Deployment) -> str | None:
+    if item.status != "Running":
+        return None
+
+    slug = _extract_slug(item.public_url, item.project_name)
+    if not slug:
+        return None
+
+    workspace = _ensure_runtime_root() / f"deployment-{item.id}-{slug}"
+    if not workspace.is_dir():
+        return None
+
+    source_root = workspace / "src"
+    artifact_dir = _find_artifact_dir(source_root)
+    if not artifact_dir:
+        return None
+
+    try:
+        runtime_url, runtime_logs = _start_static_runtime(
+            deployment_id=item.id,
+            workspace=workspace,
+            artifact_dir=artifact_dir,
+        )
+    except Exception:
+        return None
+
+    if not runtime_url:
+        return None
+
+    _append_log(db, item.id, "[runtime] Recovering static runtime after backend restart")
+    for line in runtime_logs:
+        _append_log(db, item.id, line)
+    db.commit()
+    return runtime_url
+
+
+def _public_runtime_url_for_deployment(
+    item: Deployment,
+    public_base: str | None = None,
+    db: Session | None = None,
+) -> str | None:
     runtime_url = _runtime_url_for_deployment(item.id)
+    if not runtime_url and db is not None:
+        runtime_url = _recover_static_runtime_if_possible(db, item)
     if not runtime_url:
         return None
 
@@ -304,19 +346,27 @@ def _unique_slug(db: Session, project_name: str, exclude_id: int | None = None) 
     return candidate
 
 
-def _to_summary(item: Deployment, public_base: str | None = None) -> DeploymentSummaryResponse:
+def _to_summary(
+    item: Deployment,
+    public_base: str | None = None,
+    db: Session | None = None,
+) -> DeploymentSummaryResponse:
     return DeploymentSummaryResponse(
         id=item.id,
         project_name=item.project_name,
         project_type=item.project_type,
         status=item.status,
         public_url=_public_url_for_deployment(item, public_base=public_base),
-        runtime_url=_public_runtime_url_for_deployment(item, public_base=public_base),
+        runtime_url=_public_runtime_url_for_deployment(item, public_base=public_base, db=db),
         created_at=item.created_at,
     )
 
 
-def _to_detail(item: Deployment, public_base: str | None = None) -> DeploymentDetailResponse:
+def _to_detail(
+    item: Deployment,
+    public_base: str | None = None,
+    db: Session | None = None,
+) -> DeploymentDetailResponse:
     env_rows = [
         EnvVarResponse.model_validate(env)
         for env in sorted(item.env_vars, key=lambda row: row.id)
@@ -332,7 +382,7 @@ def _to_detail(item: Deployment, public_base: str | None = None) -> DeploymentDe
         project_type=item.project_type,
         status=item.status,
         public_url=_public_url_for_deployment(item, public_base=public_base),
-        runtime_url=_public_runtime_url_for_deployment(item, public_base=public_base),
+        runtime_url=_public_runtime_url_for_deployment(item, public_base=public_base, db=db),
         created_at=item.created_at,
         build_command=item.build_command,
         run_command=item.run_command,
@@ -975,7 +1025,7 @@ def list_deployments(request: Request, db: Session = Depends(get_db)):
     deployments = (
         db.query(Deployment).order_by(Deployment.created_at.desc(), Deployment.id.desc()).all()
     )
-    return [_to_summary(item, public_base=public_base) for item in deployments]
+    return [_to_summary(item, public_base=public_base, db=db) for item in deployments]
 
 
 @router.post("/deploy/detect")
@@ -1036,7 +1086,7 @@ def create_deployment(
     _append_log(db, deployment.id, f"[ready] Deployment available at {deployment.public_url}")
     db.commit()
 
-    return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base)
+    return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base, db=db)
 
 
 @router.post("/deploy/upload", response_model=DeploymentDetailResponse)
@@ -1214,7 +1264,7 @@ async def create_deployment_from_upload(
         deployment.status = "Failed"
         _append_log(db, deployment.id, f"[ingest] ERROR archive extraction failed: {exc}")
         db.commit()
-        return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base)
+        return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base, db=db)
 
     _append_log(db, deployment.id, f"[ingest] Source extracted to {source_root}")
     db.commit()
@@ -1361,7 +1411,7 @@ async def create_deployment_from_upload(
         )
 
     db.commit()
-    return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base)
+    return _to_detail(_load_deployment_or_500(db, deployment.id), public_base=public_base, db=db)
 
 
 @router.get("/deployment/slug/{deployment_slug}", response_model=DeploymentDetailResponse)
@@ -1369,7 +1419,7 @@ def get_deployment_by_slug(deployment_slug: str, request: Request, db: Session =
     public_base = _public_base_from_request(request)
     deployment = _find_deployment_by_slug(db, deployment_slug, include_relations=True)
     if deployment:
-        return _to_detail(deployment, public_base=public_base)
+        return _to_detail(deployment, public_base=public_base, db=db)
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
@@ -1386,7 +1436,7 @@ def get_deployment(deployment_id: int, request: Request, db: Session = Depends(g
     if not deployment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
-    return _to_detail(deployment, public_base=public_base)
+    return _to_detail(deployment, public_base=public_base, db=db)
 
 
 @router.delete("/deployment/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -1422,6 +1472,8 @@ async def proxy_runtime_request(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     runtime_base = _runtime_url_for_deployment(deployment.id)
+    if not runtime_base:
+        runtime_base = _recover_static_runtime_if_possible(db, deployment)
     if not runtime_base:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
