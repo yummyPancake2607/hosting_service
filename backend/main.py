@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -11,7 +12,9 @@ from database import Base, SessionLocal, engine
 from deployments.routes import router as deployments_router
 from utils.bootstrap import seed_default_user
 
-load_dotenv()
+_BACKEND_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=_BACKEND_DIR / ".env", override=True)
+load_dotenv(override=False)
 
 
 @asynccontextmanager

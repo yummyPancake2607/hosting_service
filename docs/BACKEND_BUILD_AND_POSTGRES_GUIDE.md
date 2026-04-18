@@ -1,6 +1,7 @@
-# CRISPERHOST Backend Build and PostgreSQL Guide
+# CRISPERHOST Backend Build and SQLite Guide (Legacy Filename)
 
-This guide gives you a complete, file-by-file backend code reference and the exact PostgreSQL setup needed to run CRISPERHOST.
+This guide now assumes SQLite as the default backend database.
+No separate database service is required for local development.
 
 ## 1. Runtime Versions (Container Target)
 
@@ -11,7 +12,19 @@ Use these exact versions:
 - Node v12.22.9
 - npm 8.5.1
 
-## 2. PostgreSQL Installation and Service Start
+## 2. SQLite Default Setup
+
+Use SQLite by setting:
+
+```env
+DATABASE_URL=sqlite:///./backend/crisperhost.db
+```
+
+Start backend and it will create tables automatically.
+
+The PostgreSQL instructions below are legacy/optional.
+
+## 2a. Legacy PostgreSQL Installation and Service Start
 
 ### Linux (Ubuntu/Debian)
 
@@ -134,10 +147,10 @@ CREATE INDEX idx_build_logs_deployment_id ON build_logs(deployment_id);
 
 ## 5. Connection String
 
-Use this connection string in your environment:
+Use this default connection string in your environment:
 
 ```text
-postgresql://crisperuser:crisperpass@localhost/crisperhost
+sqlite:///./backend/crisperhost.db
 ```
 
 ## 6. Environment File
@@ -145,7 +158,7 @@ postgresql://crisperuser:crisperpass@localhost/crisperhost
 Create a root `.env` file (or copy from `.env.example`) with:
 
 ```env
-DATABASE_URL=postgresql://crisperuser:crisperpass@localhost/crisperhost
+DATABASE_URL=sqlite:///./backend/crisperhost.db
 SECRET_KEY=change-me-in-production
 PUBLIC_DEPLOYMENT_BASE_URL=http://localhost:5173
 ```
@@ -158,7 +171,6 @@ PUBLIC_DEPLOYMENT_BASE_URL=http://localhost:5173
 fastapi==0.110.3
 uvicorn==0.30.6
 sqlalchemy==2.0.36
-psycopg2-binary==2.9.10
 python-multipart==0.0.9
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
@@ -179,7 +191,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 load_dotenv()
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://crisperuser:crisperpass@localhost/crisperhost"
+    "DATABASE_URL", "sqlite:///./backend/crisperhost.db"
 )
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)

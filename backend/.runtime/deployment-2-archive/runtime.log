@@ -1,0 +1,7 @@
+127.0.0.1 - - [18/Apr/2026 10:04:16] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 10:04:16] "GET /assets/index-Bw09lQg5.js HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 10:04:16] "GET /assets/index-DhH1XJAz.css HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2026 10:04:16] code 404, message File not found
+127.0.0.1 - - [18/Apr/2026 10:04:16] "GET /games/search?q=&limit=40&offset=0 HTTP/1.1" 404 -
+127.0.0.1 - - [18/Apr/2026 10:04:21] code 404, message File not found
+127.0.0.1 - - [18/Apr/2026 10:04:21] "GET /games/home-content?review_count=6&news_count=10 HTTP/1.1" 404 -

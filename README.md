@@ -9,7 +9,7 @@ CRISPERHOST provides a platform where students can log in, submit projects, conf
 The repository contains:
 
 - A React + Vite frontend with a cyberpunk terminal-style dashboard.
-- A FastAPI backend with SQLAlchemy + PostgreSQL integration.
+- A FastAPI backend with SQLAlchemy + SQLite integration.
 - Seeded auth user for immediate login (`testing` / `123`).
 - Simulated deployment lifecycle and logs for MVP workflows.
 
@@ -26,9 +26,9 @@ The repository contains:
            +----------------------------------------------->  |
                                                                v
                                                     +----------------------+
-                                                    |      PostgreSQL      |
-                                                    | users/deployments    |
-                                                    | env vars/build logs  |
+                                                    |       SQLite         |
+                                                    | backend/crisperhost  |
+                                                    | .db users/deploy/log |
                                                     +----------------------+
 ```
 
@@ -46,7 +46,7 @@ The repository contains:
 
 - FastAPI (Python 3.10.12)
 - SQLAlchemy ORM
-- PostgreSQL
+- SQLite
 
 ## Runtime Versions (Required)
 
@@ -84,25 +84,17 @@ cp .env.example .env
 Edit `.env` as needed:
 
 ```env
-DATABASE_URL=postgresql://crisperuser:crisperpass@localhost/crisperhost
+DATABASE_URL=sqlite:///./backend/crisperhost.db
 SECRET_KEY=change-me-in-production
 PUBLIC_DEPLOYMENT_BASE_URL=http://localhost:5173
 ```
 
 ## 3. Database Setup
 
-Follow full database setup instructions in:
+SQLite requires no separate database service.
 
-- `docs/POSTGRES_SETUP.md`
-
-Arch Linux quick start:
-
-```bash
-sudo pacman -Syu --needed postgresql
-sudo -iu postgres initdb -D /var/lib/postgres/data
-sudo systemctl enable --now postgresql
-sudo -iu postgres psql
-```
+- Database file is created automatically at `backend/crisperhost.db` on backend startup.
+- If you want a fresh database, stop backend and remove that file.
 
 ## Backend Setup
 
@@ -173,7 +165,8 @@ Real deployment execution flow:
 
 - Upload a ZIP from New Deployment page.
 - Frontend calls `POST /deploy/detect` to auto-fill deployment type and commands:
-   - React/Node: `npm install` + `npm run dev`
+   - React: `npm run build` + empty run command (static runtime fallback)
+   - Node: `npm install` + `npm run start` (or `npm run dev` if no start script)
    - Python: `pip install -r requirements.txt`
    - Static: no build/run command
 - Backend auto-detects dependency manifests and runs install (`npm ci`/`npm install`/`yarn`/`pnpm` or Python install) before build.
@@ -183,7 +176,7 @@ Real deployment execution flow:
 
 ## Run Instructions
 
-1. Ensure PostgreSQL is running.
+1. No database service is required (SQLite is embedded).
 2. Start backend from `backend` with Uvicorn.
 3. Start frontend from `frontend` with Vite.
 4. Open frontend URL and log in:

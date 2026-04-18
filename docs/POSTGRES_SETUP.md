@@ -1,6 +1,22 @@
-# PostgreSQL Setup for CRISPERHOST
+# SQLite Setup for CRISPERHOST (Legacy Filename)
 
-This guide provisions PostgreSQL for the CRISPERHOST MVP backend.
+CRISPERHOST now defaults to SQLite for local development.
+
+## Recommended Setup (SQLite)
+
+1. No database server installation is required.
+2. Ensure `DATABASE_URL` points to SQLite, for example:
+
+```env
+DATABASE_URL=sqlite:///./backend/crisperhost.db
+```
+
+3. Start backend normally; tables are created automatically.
+4. To reset data, stop backend and delete `backend/crisperhost.db`.
+
+## Legacy PostgreSQL Instructions (Optional)
+
+The sections below are retained for users who still want PostgreSQL.
 
 ## Installation
 
